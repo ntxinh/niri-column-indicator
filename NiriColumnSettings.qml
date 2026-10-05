@@ -6,10 +6,20 @@ PluginSettings {
     id: root
     pluginId: "niri-column-indicator"
 
-    // Bạn có thể thêm các tùy chọn ở đây trong tương lai, ví dụ:
-    // BooleanSetting {
-    //     settingKey: "showIcons"
-    //     label: "Hiển thị biểu tượng"
-    //     defaultValue: false
-    // }
+    SliderSetting {
+        settingKey: "iconSize"
+        label: "Kích thước icon"
+        description: "Kích thước icon ứng dụng trong mỗi cột (px)"
+        defaultValue: 18
+        minimum: 12
+        maximum: 32
+        unit: "px"
+    }
+
+    ToggleSetting {
+        settingKey: "hideWhenSingleColumn"
+        label: "Ẩn khi chỉ có 1 cột"
+        description: "Ẩn widget khi workspace chỉ còn một cột"
+        defaultValue: true
+    }
 }

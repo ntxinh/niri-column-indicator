@@ -1,7 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
-import Quickshell.Io
 import Quickshell.Widgets
 import qs.Common
 import qs.Widgets
@@ -11,105 +9,114 @@ import qs.Modules.Plugins
 PluginComponent {
     id: root
 
-    // --- Phần logic lấy và xử lý dữ liệu từ Niri ---
-
-    // Đối tượng Process để chạy lệnh lấy danh sách cửa sổ từ Niri
-    Process {
-        id: niriWindowsProcess
-        command: ["niri", "msg", "--json", "windows"]
-        running: true
-
-        property var windowList: []
-
-        stdout: SplitParser {
-            onRead: {
-                try {
-                    // Gán đúng vào thuộc tính của Process thông qua id
-                    niriWindowsProcess.windowList = JSON.parse(data);
-                    console.log("Niri windows data:", JSON.stringify(niriWindowsProcess.windowList, null, 2));
-                } catch (e) {
-                    console.error("Lỗi phân tích JSON từ Niri:", e);
-                }
-            }
-        }
+    ColumnTracker {
+        id: niri
     }
 
-    // Tự động làm mới dữ liệu mỗi khi có sự kiện thay đổi cửa sổ từ Niri
-    // Đây là cách đơn giản để đảm bảo widget luôn được cập nhật.
-    // Trong môi trường production, bạn có thể muốn lắng nghe event-stream của Niri để hiệu quả hơn.
-    Timer {
-        interval: 500 // Kiểm tra mỗi nửa giây
-        running: true
-        repeat: true
-        onTriggered: niriWindowsProcess.running = true
-    }
-
-    // Lấy cửa sổ đang được focus để xác định cột hiện tại
-    readonly property var focusedWindow: niriWindowsProcess.windowList.find(w => w.is_focused)
-
-    // Lấy chỉ số cột hiện tại (1-based)
-    readonly property int currentColumn: focusedWindow && focusedWindow.layout && focusedWindow.layout.pos_in_scrolling_layout
-        ? focusedWindow.layout.pos_in_scrolling_layout[0]
-        : -1
-
-    // Lấy workspace_id của cửa sổ đang focus
-readonly property int currentWorkspaceId: focusedWindow ? focusedWindow.workspace_id : -1
-
-    // Chỉ lấy các cửa sổ trong workspace hiện tại, sắp xếp theo cột
-    readonly property var sortedWindows: niriWindowsProcess.windowList
-        .filter(w => w.layout
-                && w.layout.pos_in_scrolling_layout
-                && w.workspace_id === currentWorkspaceId)
-        .sort((a, b) => a.layout.pos_in_scrolling_layout[0] - b.layout.pos_in_scrolling_layout[0])
-
-    // Tạo một mảng chỉ chứa các cột duy nhất và thông tin của chúng
-    readonly property var columns: {
-        let cols = [];
-        let lastColIndex = -1;
-        for (let i = 0; i < sortedWindows.length; i++) {
-            let win = sortedWindows[i];
-            let colIndex = win.layout.pos_in_scrolling_layout[0];
-            if (colIndex !== lastColIndex) {
-                let fullId = win.app_id || "Unknown";
-                let shortName = fullId.substring(fullId.lastIndexOf(".") + 1);
-                cols.push({
-                    index: colIndex,
-                    appId: shortName,          // Tên ngắn (dùng cho text nếu cần)
-                    fullAppId: fullId,         // ID đầy đủ (dùng cho icon)
-                    isFocused: win.is_focused
-                });
-                lastColIndex = colIndex;
-            }
-        }
-        return cols;
-    }
-
+    // Settings (pluginData auto-reloads on pluginDataChanged)
+    property int iconSize: pluginData.iconSize || 18
+    property bool hideWhenSingle: pluginData.hideWhenSingleColumn !== undefined ? pluginData.hideWhenSingleColumn : true
 
     // --- Phần giao diện (UI) ---
 
     horizontalBarPill: Component {
         RowLayout {
-            spacing: 4
+            spacing: 6
             anchors.verticalCenter: parent.verticalCenter
+            visible: !root.hideWhenSingle || niri.columns.length > 1
 
             Repeater {
-                model: root.columns
+                model: niri.columns
 
-                delegate: IconImage {
+                delegate: RowLayout {
                     required property var modelData
                     required property int index
 
-                    visible: true
+                    spacing: 2
 
-                    // Lấy đường dẫn icon từ app_id gốc
-                    // source: Icons.iconForAppId(modelData.fullAppId, "application-x-executable-symbolic")
-                    source: DesktopService.resolveIconPath(modelData.fullAppId)
+                    // Separator between columns
+                    Rectangle {
+                        visible: index > 0
+                        width: 1
+                        height: 12
+                        color: Theme.surfaceVariant
+                        opacity: 0.4
+                        Layout.alignment: Qt.AlignVCenter
+                        Layout.rightMargin: 4
+                    }
 
-                    implicitWidth: 18
-                    implicitHeight: 18
-                    // Làm mờ các icon không phải cột hiện tại
-                    opacity: modelData.isFocused ? 1.0 : 0.6
+                    // Column icon + focused highlight + window-count badge
+                    Rectangle {
+                        id: colIcon
+
+                        implicitWidth: icon.implicitWidth + 6
+                        implicitHeight: icon.implicitHeight + 4
+                        radius: 4
+                        color: modelData.isFocused ? Theme.primaryContainer : "transparent"
+
+                        readonly property string iconPath: DesktopService.resolveIconPath(modelData.fullAppId) || ""
+
+                        IconImage {
+                            id: icon
+                            anchors.centerIn: parent
+                            source: colIcon.iconPath
+                            implicitWidth: root.iconSize
+                            implicitHeight: root.iconSize
+                            visible: colIcon.iconPath !== ""
+                            opacity: modelData.isFocused ? 1.0 : 0.6
+                        }
+
+                        // Fallback: first letter when no icon resolves
+                        Text {
+                            anchors.centerIn: parent
+                            visible: colIcon.iconPath === ""
+                            text: modelData.appId.charAt(0).toUpperCase()
+                            color: modelData.isFocused ? Theme.primary : Theme.surfaceText
+                            font.bold: modelData.isFocused
+                            font.pixelSize: root.iconSize - 4
+                        }
+
+                        // Stacked-window badge
+                        Rectangle {
+                            visible: modelData.windowCount > 1
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.rightMargin: -2
+                            anchors.topMargin: -2
+                            width: 10
+                            height: 10
+                            radius: 5
+                            color: Theme.primary
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: modelData.windowCount
+                                color: Theme.onPrimary
+                                font.pixelSize: 8
+                                font.bold: true
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+
+                            onClicked: niri.focusColumn(modelData.index)
+                            onEntered: {
+                                const tip = modelData.titles.length > 1
+                                    ? modelData.appId + "\n" + modelData.titles.join("\n")
+                                    : modelData.appId;
+                                tooltip.show(tip, colIcon, 0, 0, "below");
+                            }
+                            onExited: tooltip.hide()
+                        }
+                    }
                 }
+            }
+
+            DankTooltipV2 {
+                id: tooltip
             }
         }
     }
