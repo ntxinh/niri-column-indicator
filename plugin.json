@@ -1,0 +1,12 @@
+{
+  "id": "niri-column-indicator",
+  "name": "Niri Column Indicator",
+  "description": "Hiển thị các cột cửa sổ lân cận trong Niri trên thanh bar.",
+  "version": "1.0.0",
+  "author": "ntxinh",
+  "icon": "view-column",
+  "type": "widget",
+  "component": "./NiriColumnIndicator.qml",
+  "settings": "./NiriColumnSettings.qml",
+  "permissions": ["settings_read", "settings_write"]
+}
