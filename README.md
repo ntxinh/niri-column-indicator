@@ -1,25 +1,68 @@
+# Niri Column Indicator
+
+A DankMaterialShell (DMS) widget plugin that shows the columns on the current niri workspace as app icons on the bar.
+
+## Features
+
+- One icon per column, ordered by column position
+- Click an icon to jump to that column (`niri msg action focus-column`)
+- Focused column highlighted; unfocused icons dimmed
+- Tooltip on hover: app name, or app name + window titles for stacked columns
+- `×N` badge on columns with more than one window
+- Falls back to the app's first letter when no icon resolves
+- Settings: icon size (12–32px), hide widget when only one column remains
+- Data comes from DMS's built-in `NiriService` (live event stream over the niri socket) — no polling, no extra processes
+
+## Install
+
 ```sh
 cd ~/.config/DankMaterialShell/plugins/
 
-gh clone repo ntxinh/niri-column-indicator
+gh repo clone ntxinh/niri-column-indicator
 # or
 git clone https://github.com/ntxinh/niri-column-indicator.git
 ```
 
-# Kích hoạt Plugin
+## Enable
 
-Bây giờ bạn đã tạo xong các tệp, hãy làm theo các bước sau để kích hoạt plugin:
+1. Open **DMS Settings → Plugins** and click **Scan for Plugins**.
+2. Add the `Niri Column Indicator` widget to a bar section (Left, Center, or Right) under **Settings → Bar → Widgets**.
+3. Restart DMS if it does not appear:
 
-- Quét Plugin: Mở DMS Settings → Plugins và nhấn nút "Scan for Plugins".
-- Thêm vào thanh Bar: Sau khi quét, plugin `Niri Column Indicator` sẽ xuất hiện trong danh sách. Bạn cần thêm nó vào thanh bar. Trong DMS Settings, vào phần Bar (hoặc DankBar), tìm đến mục Widgets và kéo hoặc thêm widget `niri-column-indicator` vào một trong các phần (Left, Center, Right) của thanh bar.
-- Khởi động lại DMS (nếu cần): Đôi khi bạn có thể cần khởi động lại DMS để các thay đổi có hiệu lực. Bạn có thể làm điều này bằng cách chạy lệnh `dms ipc call plugins reload niri-column-indicator` hoặc đơn giản là đăng xuất và đăng nhập lại
+   ```sh
+   dms ipc call plugins reload niri-column-indicator
+   ```
 
-# Mẹo và Gỡ lỗi
+   or log out and back in.
 
-- Kiểm tra dữ liệu thô: Để chắc chắn Niri đang trả về dữ liệu như mong đợi, bạn có thể chạy lệnh `niri msg --json windows | jq` trong terminal. Nó sẽ hiển thị JSON được định dạng, giúp bạn dễ dàng kiểm tra các trường như `app_id` và `pos_in_scrolling_layout`
+## Settings
 
-```sh
-dms ipc call widget list
-dms run
-dms restart
-```
+Open the plugin's settings page in DMS:
+
+- **Icon size** — pixel size of each column icon (default 18).
+- **Hide when only one column** — collapses the widget on workspaces with a single column (default on).
+
+## Tips & Troubleshooting
+
+- Inspect the raw window data niri returns:
+
+  ```sh
+  niri msg --json windows | jq
+  ```
+
+  Useful fields: `app_id`, `title`, `is_focused`, `workspace_id`, `layout.pos_in_scrolling_layout`.
+
+- Other handy commands:
+
+  ```sh
+  dms ipc call widget list
+  dms run
+  dms restart
+  ```
+
+## Files
+
+- `NiriColumnIndicator.qml` — icon-based bar widget (active component)
+- `NiriColumnIndicatorText.qml` — text-based variant (not referenced by `plugin.json`)
+- `ColumnTracker.qml` — shared column derivation on top of `NiriService`
+- `NiriColumnSettings.qml` — plugin settings page
