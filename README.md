@@ -1,6 +1,9 @@
 ```sh
 cd ~/.config/DankMaterialShell/plugins/
+
 gh clone repo ntxinh/niri-column-indicator
+# or
+git clone https://github.com/ntxinh/niri-column-indicator.git
 ```
 
 # Kích hoạt Plugin
