@@ -55,7 +55,6 @@ Open the plugin's settings page in DMS:
 - Other handy commands:
 
   ```sh
-  dms ipc call widget list
   dms run
   dms restart
   ```
@@ -63,6 +62,5 @@ Open the plugin's settings page in DMS:
 ## Files
 
 - `NiriColumnIndicator.qml` — icon-based bar widget (active component)
-- `NiriColumnIndicatorText.qml` — text-based variant (not referenced by `plugin.json`)
 - `ColumnTracker.qml` — shared column derivation on top of `NiriService`
 - `NiriColumnSettings.qml` — plugin settings page
